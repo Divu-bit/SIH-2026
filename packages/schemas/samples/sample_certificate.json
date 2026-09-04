@@ -1,0 +1,12 @@
+{
+  "certificateId": "CERT-2026-SIH-001",
+  "recipientName": "Rahul Kumar",
+  "recipientDID": "did:trustchain:0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+  "courseTitle": "Advanced Blockchain Architecture & Smart Contract Security",
+  "issuerName": "Ministry of Education & National Blockchain Institute",
+  "issuerDID": "did:trustchain:0x2cb4f72907b1ec202a2f751da0286aa9ee2e3b33",
+  "issueDate": "2026-09-02T10:00:00Z",
+  "expiryDate": "2031-09-02T10:00:00Z",
+  "grade": "Grade A+ (Excellence with Honours)",
+  "criteria": "Completed master-level capstone in decentralized identity, ERC-4337 account abstraction, and zero-knowledge verification."
+}

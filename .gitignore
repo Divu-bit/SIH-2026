@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+target/
+
+# Build artifacts
+out/
+cache/
+dist/
+broadcast/
+
+# Environment files
+# .env is tracked in backup if needed, but standard practice:
+*.tar.gz

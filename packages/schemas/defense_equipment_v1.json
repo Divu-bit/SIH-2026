@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.bel-india.in/v1/defense_equipment.json",
+  "title": "DEFENSE_EQUIPMENT_V1",
+  "description": "Standard W3C Verifiable Credential Schema for Military Hardware, Radars, Avionics & Electronic Warfare Assets",
+  "type": "object",
+  "required": [
+    "equipmentSerialNo",
+    "equipmentName",
+    "classification",
+    "milSpecStandard",
+    "manufacturingUnit",
+    "custodianUnit",
+    "custodianDID",
+    "commissionDate",
+    "inspectionStatus"
+  ],
+  "properties": {
+    "equipmentSerialNo": {
+      "type": "string",
+      "description": "Unique Ordnance / Military Equipment Serial Number, e.g. BEL-RADAR-3D-CAR-042"
+    },
+    "equipmentName": {
+      "type": "string",
+      "description": "Official military nomenclature, e.g. '3D Central Acquisition Radar (Rohini)'"
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["Radar Systems", "Electronic Warfare", "Avionics", "Naval Weapon Control", "Military Communications", "Opto-Electronics", "Missile Guidance"],
+      "description": "BEL Strategic Defense Domain"
+    },
+    "milSpecStandard": {
+      "type": "string",
+      "description": "Military specification standard, e.g. 'MIL-STD-810H / JSS 55555'"
+    },
+    "manufacturingUnit": {
+      "type": "string",
+      "description": "BEL Production Plant (e.g. 'BEL Bengaluru Complex / Ghaziabad Unit')"
+    },
+    "custodianUnit": {
+      "type": "string",
+      "description": "Active military regiment or air base, e.g. 'IAF 48 Squadron, Ambala AFS'"
+    },
+    "custodianDID": {
+      "type": "string",
+      "pattern": "^did:[a-z0-9]+:0x[a-fA-F0-9]{40}$",
+      "description": "Decentralized Identifier (DID) of commanding officer / custodian unit"
+    },
+    "commissionDate": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Commissioning date into armed forces"
+    },
+    "inspectionStatus": {
+      "type": "string",
+      "enum": ["Combat Ready (Certified)", "Scheduled Maintenance", "Overhaul Required", "Decommissioned"],
+      "description": "Current on-chain operational readiness status"
+    }
+  },
+  "additionalProperties": false
+}

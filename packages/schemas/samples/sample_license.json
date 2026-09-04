@@ -1,0 +1,12 @@
+{
+  "licenseKey": "LIC-ENT-2026-X892-Z9",
+  "productName": "TrustMesh Enterprise Node v4.2",
+  "licenseeOrganization": "AeroDynamics India Corp",
+  "licenseeDID": "did:trustchain:0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
+  "issuerName": "TrustChain Software Foundation",
+  "issuerDID": "did:trustchain:0x2cb4f72907b1ec202a2f751da0286aa9ee2e3b33",
+  "issuedAt": "2026-09-01T08:30:00Z",
+  "expiresAt": "2028-09-01T08:30:00Z",
+  "seatLimit": 500,
+  "tier": "Enterprise"
+}

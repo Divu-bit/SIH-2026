@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.trustchain.id/v1/certificate.json",
+  "title": "CERTIFICATE_V1",
+  "description": "Standard W3C Verifiable Credential Schema for Academic & Professional Certifications",
+  "type": "object",
+  "required": [
+    "certificateId",
+    "recipientName",
+    "recipientDID",
+    "courseTitle",
+    "issuerName",
+    "issuerDID",
+    "issueDate",
+    "grade"
+  ],
+  "properties": {
+    "certificateId": {
+      "type": "string",
+      "description": "Unique identifier of the certificate, e.g., CERT-2026-00892"
+    },
+    "recipientName": {
+      "type": "string",
+      "description": "Full name of the certificate recipient"
+    },
+    "recipientDID": {
+      "type": "string",
+      "pattern": "^did:[a-z0-9]+:0x[a-fA-F0-9]{40}$",
+      "description": "Decentralized Identifier (DID) of recipient"
+    },
+    "courseTitle": {
+      "type": "string",
+      "description": "Title of the accredited course or skill"
+    },
+    "issuerName": {
+      "type": "string",
+      "description": "Name of the issuing organization"
+    },
+    "issuerDID": {
+      "type": "string",
+      "pattern": "^did:[a-z0-9]+:0x[a-fA-F0-9]{40}$",
+      "description": "Decentralized Identifier (DID) of issuing authority"
+    },
+    "issueDate": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 Timestamp of issuance"
+    },
+    "expiryDate": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional ISO-8601 Timestamp of expiry"
+    },
+    "grade": {
+      "type": "string",
+      "description": "Grade or distinction achieved, e.g. 'Grade A - Distinction'"
+    },
+    "criteria": {
+      "type": "string",
+      "description": "Learning outcomes or criteria verified"
+    }
+  },
+  "additionalProperties": false
+}
