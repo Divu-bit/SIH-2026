@@ -18,7 +18,7 @@ contract TrustPaymaster is Ownable {
     event Deposited(address indexed sender, uint256 amount);
 
     constructor(address _identityRegistry, address initialOwner) Ownable(initialOwner) {
-        require(_identityRegistry != address(0), "TrustPaymaster: zero IdentityRegistry");
+        if (_identityRegistry == address(0)) revert("TrustPaymaster: zero IdentityRegistry");
         identityRegistry = IdentityRegistry(_identityRegistry);
     }
 
@@ -45,14 +45,14 @@ contract TrustPaymaster is Ownable {
         address smartAccount,
         uint256 gasCost
     ) external onlyOwner {
-        require(identityRegistry.isValidController(did, smartAccount), "TrustPaymaster: smart account not valid DID controller");
-        require(address(this).balance >= gasCost, "TrustPaymaster: insufficient sponsor balance");
+        if (!identityRegistry.isValidController(did, smartAccount)) revert("TrustPaymaster: smart account not valid DID controller");
+        if (address(this).balance < gasCost) revert("TrustPaymaster: insufficient sponsor balance");
 
         sponsoredTxCount[did]++;
         totalGasSponsored += gasCost;
 
         (bool success, ) = relayer.call{value: gasCost}("");
-        require(success, "TrustPaymaster: refund failed");
+        if (!success) revert("TrustPaymaster: refund failed");
 
         emit GasSponsored(smartAccount, did, gasCost);
     }
@@ -61,9 +61,12 @@ contract TrustPaymaster is Ownable {
      * @notice Withdraw unused sponsor reserve funds
      */
     function withdraw(address payable recipient, uint256 amount) external onlyOwner {
-        require(recipient != address(0), "TrustPaymaster: zero recipient");
-        require(address(this).balance >= amount, "TrustPaymaster: insufficient balance");
-        recipient.transfer(amount);
+        if (recipient == address(0)) revert("TrustPaymaster: zero recipient");
+        if (address(this).balance < amount) revert("TrustPaymaster: insufficient balance");
+
+        // Use call instead of transfer() to avoid 2300-gas limit issues (spec §15.1)
+        (bool success, ) = recipient.call{value: amount}("");
+        if (!success) revert("TrustPaymaster: withdrawal failed");
     }
 
     receive() external payable {

@@ -8,6 +8,11 @@ cache/
 dist/
 broadcast/
 
-# Environment files
-# .env is tracked in backup if needed, but standard practice:
+# Environment files — NEVER commit private keys or secrets
+.env
+.env.*
+.env.local
+.env.*.local
+
+# Backup archives
 *.tar.gz

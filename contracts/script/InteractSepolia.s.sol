@@ -10,10 +10,9 @@ import "../src/AssetRegistry.sol";
 
 contract InteractSepoliaScript is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envOr(
-            "PRIVATE_KEY",
-            uint256(0x527e07820cab1011f326fa8f6dbdad69ece987c872b06e610842bd45a39dca0f)
-        );
+        // SECURITY: Never hardcode private keys. Set PRIVATE_KEY in your environment:
+        //   export PRIVATE_KEY=0x<your_key>   (or use a .env file listed in .gitignore)
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
         address roleManagerAddr = vm.envAddress("ROLE_MANAGER_ADDRESS");

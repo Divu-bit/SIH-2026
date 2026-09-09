@@ -21,12 +21,14 @@ contract TrustSmartAccount {
     event OwnerUpdated(address indexed oldOwner, address indexed newOwner);
 
     modifier onlyOwner() {
-        require(msg.sender == owner || msg.sender == address(this), "TrustSmartAccount: unauthorized caller");
+        if (msg.sender != owner && msg.sender != address(this)) {
+            revert("TrustSmartAccount: unauthorized caller");
+        }
         _;
     }
 
     constructor(address _owner, string memory _did) {
-        require(_owner != address(0), "TrustSmartAccount: zero owner");
+        if (_owner == address(0)) revert("TrustSmartAccount: zero owner");
         owner = _owner;
         did = _did;
     }
@@ -35,9 +37,9 @@ contract TrustSmartAccount {
      * @notice Direct execution of a transaction by the owner or authorized relayer
      */
     function execute(address target, uint256 value, bytes calldata data) external payable onlyOwner returns (bytes memory) {
-        require(target != address(0), "TrustSmartAccount: zero target");
+        if (target == address(0)) revert("TrustSmartAccount: zero target");
         (bool success, bytes memory result) = target.call{value: value}(data);
-        require(success, "TrustSmartAccount: execution failed");
+        if (!success) revert("TrustSmartAccount: execution failed");
         emit Executed(target, value, data);
         return result;
     }
@@ -52,8 +54,8 @@ contract TrustSmartAccount {
         uint256 validUntil,
         bytes calldata signature
     ) external payable returns (bytes memory) {
-        require(block.timestamp <= validUntil, "TrustSmartAccount: transaction expired");
-        
+        if (block.timestamp > validUntil) revert("TrustSmartAccount: transaction expired");
+
         bytes32 messageHash = keccak256(
             abi.encodePacked(
                 address(this),
@@ -68,10 +70,10 @@ contract TrustSmartAccount {
 
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         address signer = ethSignedMessageHash.recover(signature);
-        require(signer == owner, "TrustSmartAccount: invalid owner signature");
+        if (signer != owner) revert("TrustSmartAccount: invalid owner signature");
 
         (bool success, bytes memory result) = target.call{value: value}(data);
-        require(success, "TrustSmartAccount: signed execution failed");
+        if (!success) revert("TrustSmartAccount: signed execution failed");
         emit Executed(target, value, data);
         return result;
     }
@@ -80,7 +82,7 @@ contract TrustSmartAccount {
      * @notice Rotate the controller/owner of this smart account
      */
     function transferOwnership(address newOwner) external onlyOwner {
-        require(newOwner != address(0), "TrustSmartAccount: zero new owner");
+        if (newOwner == address(0)) revert("TrustSmartAccount: zero new owner");
         address old = owner;
         owner = newOwner;
         emit OwnerUpdated(old, newOwner);
