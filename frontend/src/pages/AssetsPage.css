@@ -1,0 +1,30 @@
+/* AssetsPage styles */
+
+.assets-filters {
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.assets-filter-group {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.assets-filter-group .form-input {
+  flex: 1;
+}
+
+.assets-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .assets-filter-group {
+    flex-direction: column;
+  }
+}
