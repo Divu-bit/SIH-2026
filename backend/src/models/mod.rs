@@ -129,6 +129,8 @@ pub struct VerifyAssetResult {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegisterIdentityRequest {
     pub did: String,
+    #[serde(default)]
+    pub controller: Option<String>,
     pub metadata_uri: Option<String>,
     pub public_key: Option<String>,
 }

@@ -103,6 +103,7 @@ export interface VerifyAssetResult {
 
 export interface RegisterIdentityRequest {
   did: string;
+  controller: string;
   metadata_uri?: string;
   public_key?: string;
 }

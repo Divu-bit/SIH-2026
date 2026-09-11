@@ -8,7 +8,7 @@
 
 use alloy::{
     network::EthereumWallet,
-    primitives::{Bytes, FixedBytes, U256},
+    primitives::{Address, Bytes, FixedBytes, U256},
     providers::{Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
     sol,
@@ -37,6 +37,7 @@ sol! {
     interface IIdentityRegistryWrite {
         function registerIdentity(
             string calldata did,
+            address controller,
             bytes calldata publicKey,
             string calldata metadataUri
         ) external;
@@ -134,6 +135,20 @@ pub async fn register_identity(
         return Err(AppError::BadRequest("DID cannot be empty".to_string()));
     }
 
+    let controller: Address = match payload.controller.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(addr_str) => addr_str
+            .parse()
+            .map_err(|_| AppError::BadRequest("Invalid controller address (must be a valid 0x Ethereum address)".to_string()))?,
+        None => user
+            .address
+            .parse()
+            .map_err(|_| AppError::BadRequest("Controller address is required".to_string()))?,
+    };
+
+    if controller == Address::ZERO {
+        return Err(AppError::BadRequest("Controller address cannot be the zero address".to_string()));
+    }
+
     let provider = build_provider!(state);
 
     let registry = IIdentityRegistryWrite::new(state.client.identity_registry_addr, &provider);
@@ -149,7 +164,7 @@ pub async fn register_identity(
     let metadata_uri = payload.metadata_uri.unwrap_or_default();
 
     let receipt = registry
-        .registerIdentity(payload.did.clone(), pub_key_bytes, metadata_uri)
+        .registerIdentity(payload.did.clone(), controller, pub_key_bytes, metadata_uri)
         .send()
         .await
         .map_err(|e| AppError::BlockchainError(format!("registerIdentity failed: {}", e)))?

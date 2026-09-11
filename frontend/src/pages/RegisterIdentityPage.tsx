@@ -3,15 +3,16 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { useState } from 'react';
-import { ShieldAlert, CheckCircle } from 'lucide-react';
+import { ShieldAlert, CheckCircle, UserCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { registerIdentity } from '../services/api';
 import type { TxResponse } from '../types';
 import './FormPage.css';
 
 export default function RegisterIdentityPage() {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, address } = useAuth();
   const [did, setDid] = useState('');
+  const [controller, setController] = useState('');
   const [publicKey, setPublicKey] = useState('');
   const [metadataUri, setMetadataUri] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,9 +45,25 @@ export default function RegisterIdentityPage() {
     setError(null);
     setResult(null);
 
+    const trimmedDid = did.trim();
+    const trimmedController = controller.trim();
+
+    if (!trimmedDid.startsWith('did:trustchain:') || trimmedDid.length < 20) {
+      setError('DID must start with "did:trustchain:" and be at least 20 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    if (!trimmedController.startsWith('0x') || trimmedController.length !== 42) {
+      setError('Controller must be a valid Ethereum address (42 characters starting with 0x).');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await registerIdentity({
-        did: did.trim(),
+        did: trimmedDid,
+        controller: trimmedController,
         public_key: publicKey.trim() || undefined,
         metadata_uri: metadataUri.trim() || undefined,
       });
@@ -69,17 +86,71 @@ export default function RegisterIdentityPage() {
         <form onSubmit={handleSubmit} className="card" style={{ padding: 'var(--space-8)' }}>
           <div className="form-group">
             <label className="form-label">DID String *</label>
-            <input type="text" className="form-input" placeholder="did:trustchain:0x..." value={did} onChange={(e) => setDid(e.target.value)} required />
+            <input
+              type="text"
+              className="form-input"
+              placeholder="did:trustchain:employee-003"
+              value={did}
+              onChange={(e) => setDid(e.target.value)}
+              required
+            />
           </div>
+
+          <div className="form-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-1)' }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>Controller Address *</label>
+              {address && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    fontSize: 'var(--text-xs)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setController(address)}
+                  title="Auto-fill your connected wallet address"
+                >
+                  <UserCheck size={14} /> Self ({address.slice(0, 6)}...{address.slice(-4)})
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="0x..."
+              value={controller}
+              onChange={(e) => setController(e.target.value)}
+              required
+            />
+          </div>
+
           <div className="form-group">
             <label className="form-label">Public Key (hex, optional)</label>
-            <input type="text" className="form-input" placeholder="0x04..." value={publicKey} onChange={(e) => setPublicKey(e.target.value)} />
+            <input
+              type="text"
+              className="form-input"
+              placeholder="0xabcdef..."
+              value={publicKey}
+              onChange={(e) => setPublicKey(e.target.value)}
+            />
           </div>
+
           <div className="form-group">
             <label className="form-label">Metadata URI (optional)</label>
-            <input type="text" className="form-input" placeholder="ipfs://..." value={metadataUri} onChange={(e) => setMetadataUri(e.target.value)} />
+            <input
+              type="text"
+              className="form-input"
+              placeholder="ipfs://QmTestEmployee001"
+              value={metadataUri}
+              onChange={(e) => setMetadataUri(e.target.value)}
+            />
           </div>
-          <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ width: '100%' }}>
+
+          <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ width: '100%', marginTop: 'var(--space-4)' }}>
             {loading ? 'Submitting Transaction...' : 'Register Identity'}
           </button>
         </form>
