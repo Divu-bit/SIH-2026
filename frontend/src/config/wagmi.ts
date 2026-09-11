@@ -8,7 +8,7 @@ export const config = getDefaultConfig({
   projectId: 'c4f79cc821944d9680842e34466bfb10',
   chains: [sepolia],
   transports: {
-    [sepolia.id]: http('https://gateway.tenderly.co/public/sepolia'),
+    [sepolia.id]: http('https://ethereum-sepolia-rpc.publicnode.com'),
   },
   ssr: false,
 });

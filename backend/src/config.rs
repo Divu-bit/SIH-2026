@@ -34,7 +34,7 @@ impl Config {
                 .parse()
                 .expect("PORT must be a valid u16"),
             sepolia_rpc_url: env::var("SEPOLIA_RPC_URL")
-                .unwrap_or_else(|_| "https://gateway.tenderly.co/public/sepolia".to_string()),
+                .unwrap_or_else(|_| "https://ethereum-sepolia-rpc.publicnode.com".to_string()),
             database_url: env::var("DATABASE_URL")
                 .unwrap_or_else(|_| "postgres://localhost/trustchain".to_string()),
             // Phase 10
