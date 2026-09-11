@@ -22,6 +22,8 @@ import type { AuthState } from '../types';
 import {
   authenticateWithWallet,
   disconnectWallet,
+  getOnChainRoles,
+  ADMIN_ADDRESS,
 } from '../services/auth';
 import { setToken, getToken } from '../services/api';
 
@@ -82,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const savedAddress = localStorage.getItem('trustchain_address');
       const savedToken = getToken();
       const savedRoles = localStorage.getItem('trustchain_roles');
+      const isKnownAdmin = addr.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
 
       if (
         savedToken &&
@@ -93,30 +96,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           roles = JSON.parse(savedRoles || '{}');
         } catch {}
 
+        const isAdmin = roles.isAdmin || isKnownAdmin;
+        const isManager = roles.isManager || isKnownAdmin;
+        const isAuditor = roles.isAuditor || false;
+
         const savedDid = localStorage.getItem('trustchain_did') || `did:trustchain:${addr.toLowerCase()}`;
         setState({
           isAuthenticated: true,
           address: addr,
           did: savedDid,
-          isAdmin: roles.isAdmin || false,
-          isManager: roles.isManager || false,
-          isAuditor: roles.isAuditor || false,
+          isAdmin,
+          isManager,
+          isAuditor,
           token: savedToken,
         });
         lastAuthenticatedAddress.current = addr.toLowerCase();
         setLoading(false);
+
+        // Always re-verify roles on-chain in background to keep state accurate and fresh
+        getOnChainRoles(addr).then((onChain) => {
+          setState((prev) => ({
+            ...prev,
+            isAdmin: onChain.isAdmin || isKnownAdmin,
+            isManager: onChain.isManager || isKnownAdmin,
+            isAuditor: onChain.isAuditor,
+          }));
+          localStorage.setItem(
+            'trustchain_roles',
+            JSON.stringify({
+              isAdmin: onChain.isAdmin || isKnownAdmin,
+              isManager: onChain.isManager || isKnownAdmin,
+              isAuditor: onChain.isAuditor,
+            })
+          );
+        }).catch(() => {});
+
         return;
       }
 
       // Fresh connection or switched account — authenticate with wallet
       const result = await authenticateWithWallet(addr);
+      const isAdmin = result.is_admin || isKnownAdmin;
+      const isManager = result.is_manager || isKnownAdmin;
 
       const newState: AuthState = {
         isAuthenticated: true,
         address: result.address,
         did: result.did,
-        isAdmin: result.is_admin,
-        isManager: result.is_manager,
+        isAdmin,
+        isManager,
         isAuditor: result.is_auditor,
         token: result.token,
       };
@@ -127,8 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(
         'trustchain_roles',
         JSON.stringify({
-          isAdmin: result.is_admin,
-          isManager: result.is_manager,
+          isAdmin,
+          isManager,
           isAuditor: result.is_auditor,
         })
       );
@@ -162,11 +190,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentAddr = wagmiAddress.toLowerCase();
 
     // If the address is different from what was previously authenticated
-    // (e.g. user changed account in MetaMask or newly connected)
-    if (lastAuthenticatedAddress.current !== currentAddr) {
+    // or if the admin address is currently misclassified as non-admin
+    if (
+      lastAuthenticatedAddress.current !== currentAddr ||
+      (currentAddr === ADMIN_ADDRESS.toLowerCase() && !state.isAdmin)
+    ) {
       handleAuthenticate(wagmiAddress);
     }
-  }, [isConnected, wagmiAddress, state.isAuthenticated, state.address, handleAuthenticate]);
+  }, [isConnected, wagmiAddress, state.isAuthenticated, state.address, state.isAdmin, handleAuthenticate]);
 
   // ── Login trigger ───────────────────────────────────────────────────────
   const handleLogin = useCallback(async () => {

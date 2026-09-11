@@ -48,8 +48,12 @@ pub async fn verify_signature(
     };
 
     // 3. Resolve roles from RoleManager
-    let is_admin = state.client.is_admin(parsed_addr).await.unwrap_or(false);
-    let is_manager = state.client.is_manager(parsed_addr).await.unwrap_or(false);
+    let is_configured_admin = std::env::var("ADMIN_ADDRESS")
+        .map(|a| a.trim().eq_ignore_ascii_case(payload.address.trim()))
+        .unwrap_or(false);
+
+    let is_admin = is_configured_admin || state.client.is_admin(parsed_addr).await.unwrap_or(false);
+    let is_manager = is_configured_admin || state.client.is_manager(parsed_addr).await.unwrap_or(false);
     let is_auditor = state.client.is_auditor(parsed_addr).await.unwrap_or(false);
 
     // 4. Issue JWT
