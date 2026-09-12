@@ -33,7 +33,13 @@ const navItems: NavItem[] = [
       { label: 'Verify Asset', path: '/verify' },
     ],
   },
-  { label: 'Schemas', path: '/schemas' },
+  {
+    label: 'Schemas',
+    children: [
+      { label: 'Browse Schemas', path: '/schemas' },
+      { label: 'Register Schema', path: '/schemas/create' },
+    ],
+  },
   { label: 'Verify', path: '/verify' },
   { label: 'Audit', path: '/audit' },
   { label: 'Dashboard', path: '/dashboard' },

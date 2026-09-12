@@ -62,18 +62,21 @@ sol! {
     #[sol(rpc)]
     interface IAssetRegistryWrite {
         function issueAsset(
+            address recipient,
             string calldata ownerDID,
-            string calldata schemaId,
+            string calldata issuerDID,
             string calldata assetType,
+            string calldata schemaId,
             bytes32 credentialHash,
             string calldata metadataUri,
-            bool isTransferable,
-            uint256 expiresAt
+            uint256 expiresAt,
+            bool isTransferable
         ) external returns (uint256 tokenId);
 
         function transferAsset(
             uint256 tokenId,
-            string calldata toDID
+            address to,
+            string calldata newOwnerDID
         ) external;
 
         function revokeAsset(
@@ -257,19 +260,40 @@ pub async fn issue_asset(
     let cred_hex = payload.credential_hash.trim_start_matches("0x");
     let cred_bytes = hex::decode(cred_hex)
         .map_err(|_| AppError::BadRequest("Invalid credential_hash hex".to_string()))?;
+    if cred_bytes.len() != 32 {
+        return Err(AppError::BadRequest("credential_hash must be exactly 32 bytes (64 hex characters)".to_string()));
+    }
     let cred_hash: FixedBytes<32> = FixedBytes::from_slice(&cred_bytes);
+    if cred_hash == FixedBytes::ZERO {
+        return Err(AppError::BadRequest("credential_hash cannot be all zeros. Please provide a valid non-zero Keccak-256 hash.".to_string()));
+    }
+
+    // Resolve recipient controller from owner DID on-chain
+    let owner_identity = state.client.get_identity(&payload.owner_did).await
+        .map_err(|e| AppError::BadRequest(format!("Owner DID '{}' is not registered on-chain: {}", payload.owner_did, e)))?;
+    let recipient: Address = owner_identity.controller.parse()
+        .map_err(|_| AppError::BadRequest(format!("Invalid controller address '{}' for owner DID", owner_identity.controller)))?;
+
+    // Issuer DID: user's DID or configured Admin DID
+    let issuer_did = if !user.did.trim().is_empty() {
+        user.did.clone()
+    } else {
+        "did:trustchain:0x2cb4f72907B1EC202a2f751Da0286aa9Ee2E3b33".to_string()
+    };
 
     let expires_at = U256::from(payload.expires_at);
 
     let receipt = registry
         .issueAsset(
+            recipient,
             payload.owner_did.clone(),
-            payload.schema_id,
+            issuer_did,
             payload.asset_type,
+            payload.schema_id,
             cred_hash,
             payload.metadata_uri,
-            payload.is_transferable,
             expires_at,
+            payload.is_transferable,
         )
         .send()
         .await
@@ -303,8 +327,13 @@ pub async fn transfer_asset(
     let provider = build_provider!(state);
     let registry = IAssetRegistryWrite::new(state.client.asset_registry_addr, &provider);
 
+    let to_identity = state.client.get_identity(&payload.to_did).await
+        .map_err(|e| AppError::BadRequest(format!("Recipient DID '{}' is not registered on-chain: {}", payload.to_did, e)))?;
+    let to_addr: Address = to_identity.controller.parse()
+        .map_err(|_| AppError::BadRequest(format!("Invalid controller address '{}' for recipient DID", to_identity.controller)))?;
+
     let receipt = registry
-        .transferAsset(U256::from(token_id), payload.to_did.clone())
+        .transferAsset(U256::from(token_id), to_addr, payload.to_did.clone())
         .send()
         .await
         .map_err(|e| AppError::BlockchainError(format!("transferAsset failed: {}", e)))?

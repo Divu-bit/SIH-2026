@@ -105,3 +105,45 @@ pub async fn resolve_controller_identity(
 
     Ok(Json(identity))
 }
+
+#[derive(Debug, Deserialize)]
+pub struct SyncIdentityRequest {
+    pub did: String,
+    pub controller: String,
+    pub metadata_uri: Option<String>,
+    pub tx_hash: Option<String>,
+}
+
+/// POST /api/identity/sync
+/// Records an on-chain registered identity in the local DB cache.
+pub async fn sync_identity(
+    State(state): State<AppState>,
+    Json(payload): Json<SyncIdentityRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    if payload.did.trim().is_empty() {
+        return Err(AppError::BadRequest("DID cannot be empty".to_string()));
+    }
+
+    let metadata_uri = payload.metadata_uri.unwrap_or_default();
+    db_identity::upsert_identity(
+        &state.db,
+        &payload.did,
+        &payload.controller.to_lowercase(),
+        0, // ACTIVE
+        &metadata_uri,
+        payload.tx_hash.as_deref(),
+    )
+    .await?;
+
+    tracing::info!(
+        "Synced identity {} for controller {} (tx: {:?})",
+        payload.did,
+        payload.controller,
+        payload.tx_hash
+    );
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": format!("Identity '{}' synced to database", payload.did)
+    })))
+}

@@ -34,6 +34,7 @@ function App() {
             <Route path="/assets/issue" element={<IssueAssetPage />} />
             <Route path="/verify" element={<VerifyAssetPage />} />
             <Route path="/schemas" element={<SchemasPage />} />
+            <Route path="/schemas/create" element={<SchemasPage createMode={true} />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

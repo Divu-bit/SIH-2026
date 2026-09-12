@@ -41,6 +41,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/auth/verify", post(auth::verify_signature))
         // Identity
         .route("/api/identity/me", get(identity::get_my_identity))
+        .route("/api/identity/sync", post(identity::sync_identity))
         .route("/api/identity/:did", get(identity::get_identity))
         .route("/api/identity/controller/:address", get(identity::resolve_controller_identity))
         // Schemas

@@ -125,6 +125,20 @@ export async function registerIdentity(payload: RegisterIdentityRequest): Promis
   });
 }
 
+export interface SyncIdentityPayload {
+  did: string;
+  controller: string;
+  metadata_uri?: string;
+  tx_hash?: string;
+}
+
+export async function syncIdentity(payload: SyncIdentityPayload): Promise<{ success: boolean; message: string }> {
+  return request<{ success: boolean; message: string }>('/identity/sync', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 // ── Schemas ───────────────────────────────────────────────────────────────
 
 export async function listSchemas(): Promise<SchemaRecord[]> {

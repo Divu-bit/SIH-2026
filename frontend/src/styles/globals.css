@@ -435,6 +435,10 @@ code {
   to { transform: rotate(360deg); }
 }
 
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 .loading-overlay {
   display: flex;
   align-items: center;
