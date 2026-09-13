@@ -113,9 +113,8 @@ export default function Navbar() {
           {navItems.map((item) => (
             <li
               key={item.label}
-              className={`navbar-item ${item.children ? 'has-dropdown' : ''} ${
-                isActive(item.path) ? 'active' : ''
-              }`}
+              className={`navbar-item ${item.children ? 'has-dropdown' : ''} ${isActive(item.path) ? 'active' : ''
+                }`}
               onMouseEnter={() => item.children && setOpenDropdown(item.label)}
               onMouseLeave={() => item.children && setOpenDropdown(null)}
             >

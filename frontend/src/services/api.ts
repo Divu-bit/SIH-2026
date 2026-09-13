@@ -22,7 +22,8 @@ import type {
   VerifySignatureResponse,
 } from '../types';
 
-const BASE_URL = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const BASE_URL = `${API_BASE}/api`;
 
 // ── Token Management ──────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ export async function requestRaw(path: string): Promise<Response> {
 // ── Health ─────────────────────────────────────────────────────────────────
 
 export async function getHealth(): Promise<HealthResponse> {
-  const res = await fetch('/health');
+  const res = await fetch(`${API_BASE}/health`);
   return res.json();
 }
 

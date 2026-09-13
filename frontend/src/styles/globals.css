@@ -69,19 +69,41 @@ ol {
   list-style: none;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-heading);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
   color: var(--color-text);
 }
 
-h1 { font-size: var(--text-4xl); }
-h2 { font-size: var(--text-3xl); }
-h3 { font-size: var(--text-2xl); }
-h4 { font-size: var(--text-xl); }
-h5 { font-size: var(--text-lg); }
-h6 { font-size: var(--text-base); }
+h1 {
+  font-size: var(--text-4xl);
+}
+
+h2 {
+  font-size: var(--text-3xl);
+}
+
+h3 {
+  font-size: var(--text-2xl);
+}
+
+h4 {
+  font-size: var(--text-xl);
+}
+
+h5 {
+  font-size: var(--text-lg);
+}
+
+h6 {
+  font-size: var(--text-base);
+}
 
 p {
   margin-bottom: var(--space-4);
@@ -432,7 +454,9 @@ code {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spin {
@@ -495,15 +519,24 @@ code {
 
 /* ── Responsive helpers ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+
   .container,
   .container-wide {
     padding: 0 var(--space-4);
   }
 
-  h1 { font-size: var(--text-3xl); }
-  h2 { font-size: var(--text-2xl); }
-  h3 { font-size: var(--text-xl); }
-  
+  h1 {
+    font-size: var(--text-3xl);
+  }
+
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  h3 {
+    font-size: var(--text-xl);
+  }
+
   .section {
     padding: var(--space-10) 0;
   }
@@ -550,6 +583,7 @@ code {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
