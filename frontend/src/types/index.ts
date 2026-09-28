@@ -210,3 +210,58 @@ export interface AuthState {
   isAuditor: boolean;
   token: string | null;
 }
+
+// ── Verifiable Presentations ─────────────────────────────────────────────────
+
+export interface CreateVpRequest {
+  token_id: number;
+  expiry_hours: number;
+  purpose: string;
+  holder_signature: string;
+  holder_address: string;
+}
+
+export interface CreateVpResponse {
+  vp_id: string;
+  vp_token: string;
+  shareable_url: string;
+  expires_at: number;
+  purpose: string;
+}
+
+export interface VerifyVpRequest {
+  vp_token: string;
+}
+
+export interface VpChecks {
+  token_integrity: boolean;
+  holder_signature_valid: boolean;
+  controller_match: boolean;
+  not_expired: boolean;
+  credential_active: boolean;
+  not_revoked: boolean;
+}
+
+export interface VpCredentialDetails {
+  token_id: number;
+  owner_did: string;
+  issuer_did: string;
+  asset_type: string;
+  schema_id: string;
+  metadata_uri: string;
+  issued_at: number;
+  expires_at: number;
+  status: string;
+  holder_address: string;
+  holder_did: string;
+  purpose: string;
+  vp_issued_at: number;
+  vp_expires_at: number;
+}
+
+export interface VerifyVpResult {
+  is_valid: boolean;
+  checks: VpChecks;
+  credential: VpCredentialDetails | null;
+  failure_reason: string | null;
+}

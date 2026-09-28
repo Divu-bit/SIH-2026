@@ -1,0 +1,255 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ShareCredentialPage — Authenticated holders create a Verifiable Presentation
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+import { useState } from 'react';
+import { Share2, Copy, Check, ShieldCheck, Clock, FileText, ExternalLink } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { createVp } from '../services/api';
+import type { CreateVpResponse } from '../types';
+import './FormPage.css';
+import './ShareCredentialPage.css';
+
+const PURPOSES = [
+  { value: 'job_application', label: 'Job Application' },
+  { value: 'background_check', label: 'Background Check' },
+  { value: 'identity_verification', label: 'Identity Verification' },
+  { value: 'educational_verification', label: 'Educational Verification' },
+  { value: 'government_service', label: 'Government Service' },
+  { value: 'general', label: 'General Purpose' },
+];
+
+const EXPIRY_OPTIONS = [
+  { value: 1, label: '1 Hour' },
+  { value: 24, label: '24 Hours' },
+  { value: 72, label: '3 Days' },
+  { value: 168, label: '7 Days' },
+  { value: 720, label: '30 Days' },
+];
+
+export default function ShareCredentialPage() {
+  const { address, isAuthenticated, signMessage } = useAuth();
+  const [tokenId, setTokenId] = useState('');
+  const [purpose, setPurpose] = useState('job_application');
+  const [expiryHours, setExpiryHours] = useState(24);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<CreateVpResponse | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!address || !tokenId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Calculate expiry timestamp
+      const expiresAt = Math.floor(Date.now() / 1000) + expiryHours * 3600;
+
+      // 2. Build the EXACT canonical message (must match backend vp_signing_message())
+      const message = [
+        'TrustChain Verifiable Presentation',
+        '',
+        `I am presenting credential #${tokenId} for: ${purpose}`,
+        `Holder: ${address.toLowerCase()}`,
+        `This presentation expires: ${expiresAt}`,
+        '',
+        'By signing, I prove I control this identity.',
+      ].join('\n');
+
+      // 3. Sign with MetaMask (EIP-191 personal_sign)
+      const signature = await signMessage(message);
+
+      // 4. Send to backend
+      const vp = await createVp({
+        token_id: parseInt(tokenId),
+        expiry_hours: expiryHours,
+        purpose,
+        holder_signature: signature,
+        holder_address: address.toLowerCase(),
+      });
+
+      setResult(vp);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create presentation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToken = async () => {
+    if (!result) return;
+    await navigator.clipboard.writeText(result.vp_token);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const verifyUrl = result
+    ? `${window.location.origin}/verify/vp?token=${encodeURIComponent(result.vp_token)}`
+    : '';
+
+  if (!isAuthenticated) {
+    return (
+      <div className="section">
+        <div className="container" style={{ maxWidth: 600 }}>
+          <div className="card vp-empty-state">
+            <ShieldCheck size={48} className="vp-empty-icon" />
+            <h3>Connect Your Wallet</h3>
+            <p>You must be authenticated to create a Verifiable Presentation.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="section">
+      <div className="container" style={{ maxWidth: 720 }}>
+        <div className="vp-header">
+          <Share2 size={36} className="vp-header-icon" />
+          <div>
+            <h2 className="section-title" style={{ marginBottom: 4 }}>Share Credential</h2>
+            <p className="vp-subtitle">
+              Sign once with your wallet — your credential can be verified anytime,
+              even when you're offline.
+            </p>
+          </div>
+        </div>
+
+        {!result ? (
+          <form onSubmit={handleCreate} className="card" style={{ padding: 'var(--space-8)' }}>
+
+            {/* How it works */}
+            <div className="vp-how-it-works">
+              <div className="vp-step"><span className="vp-step-num">1</span><span>Choose credential & purpose</span></div>
+              <div className="vp-step-arrow">→</div>
+              <div className="vp-step"><span className="vp-step-num">2</span><span>Sign with MetaMask</span></div>
+              <div className="vp-step-arrow">→</div>
+              <div className="vp-step"><span className="vp-step-num">3</span><span>Share the link</span></div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Token ID (Credential) *</label>
+              <input
+                type="number"
+                className="form-input"
+                placeholder="e.g. 1"
+                value={tokenId}
+                onChange={e => setTokenId(e.target.value)}
+                required
+                min="1"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Purpose *</label>
+              <select
+                className="form-input"
+                value={purpose}
+                onChange={e => setPurpose(e.target.value)}
+              >
+                {PURPOSES.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Valid For *</label>
+              <div className="vp-expiry-grid">
+                {EXPIRY_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`vp-expiry-btn ${expiryHours === opt.value ? 'active' : ''}`}
+                    onClick={() => setExpiryHours(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {error && <div className="form-error">{error}</div>}
+
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg"
+              disabled={loading}
+              style={{ width: '100%', marginTop: 'var(--space-4)' }}
+            >
+              <ShieldCheck size={18} />
+              {loading ? 'Signing with MetaMask...' : 'Create Verifiable Presentation'}
+            </button>
+
+            <p className="vp-disclaimer">
+              Your wallet will be asked to sign a message — no gas fees, no transaction.
+            </p>
+          </form>
+        ) : (
+          <div className="vp-result card">
+            <div className="vp-result-header">
+              <Check size={28} className="vp-result-check" />
+              <div>
+                <h3 style={{ margin: 0 }}>Presentation Created!</h3>
+                <p style={{ margin: '4px 0 0', color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+                  Valid for {expiryHours}h · Purpose: {PURPOSES.find(p => p.value === purpose)?.label}
+                </p>
+              </div>
+            </div>
+
+            {/* Share options */}
+            <div className="vp-share-section">
+              <p className="vp-share-label">
+                <ExternalLink size={14} /> Shareable Verification Link
+              </p>
+              <div className="vp-share-url">{verifyUrl}</div>
+              <div className="vp-share-actions">
+                <button
+                  className="btn btn-outline"
+                  onClick={() => navigator.clipboard.writeText(verifyUrl)}
+                >
+                  <Copy size={16} /> Copy Link
+                </button>
+                <button className="btn btn-outline" onClick={copyToken}>
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  {copied ? 'Copied!' : 'Copy VP Token'}
+                </button>
+                <a
+                  href={verifyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                >
+                  <ExternalLink size={16} /> Open Verify Page
+                </a>
+              </div>
+            </div>
+
+            {/* VP ID */}
+            <div className="vp-meta">
+              <div className="vp-meta-item">
+                <FileText size={14} />
+                <span>VP ID: <code>{result.vp_id}</code></span>
+              </div>
+              <div className="vp-meta-item">
+                <Clock size={14} />
+                <span>Expires: {new Date(result.expires_at * 1000).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <button
+              className="btn btn-outline"
+              onClick={() => { setResult(null); setTokenId(''); }}
+              style={{ marginTop: 'var(--space-4)' }}
+            >
+              Create Another
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

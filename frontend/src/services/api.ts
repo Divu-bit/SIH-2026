@@ -8,6 +8,8 @@ import type {
   AuditSummary,
   AssetRecord,
   ChallengeResponse,
+  CreateVpRequest,
+  CreateVpResponse,
   HealthResponse,
   IdentityRecord,
   IssueAssetRequest,
@@ -20,6 +22,8 @@ import type {
   VerifyAssetPayload,
   VerifyAssetResult,
   VerifySignatureResponse,
+  VerifyVpRequest,
+  VerifyVpResult,
 } from '../types';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
@@ -263,4 +267,39 @@ export async function uploadMetadata(
 
 export async function getMetadata(id: string): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>(`/metadata/${id}`);
+}
+
+// ── Verifiable Presentations ──────────────────────────────────────────────
+
+export async function createVp(payload: CreateVpRequest): Promise<CreateVpResponse> {
+  return request<CreateVpResponse>('/vp/create', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function verifyVp(payload: VerifyVpRequest): Promise<VerifyVpResult> {
+  return request<VerifyVpResult>('/vp/verify', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listMyVps(): Promise<{ presentations: VpListItem[] }> {
+  return request<{ presentations: VpListItem[] }>('/vp/my');
+}
+
+export async function revokeVp(vpId: string): Promise<{ success: boolean; message: string }> {
+  return request<{ success: boolean; message: string }>(`/vp/${vpId}/revoke`, {
+    method: 'POST',
+  });
+}
+
+export interface VpListItem {
+  vp_id: string;
+  token_id: number;
+  purpose: string;
+  issued_at: number;
+  expires_at: number;
+  status: string;
 }

@@ -34,3 +34,5 @@ jsonwebtoken = "9"
 validator = { version = "0.18", features = ["derive"] }
 tower_governor = "0.4"
 
+# Phase VP: URL encoding for shareable VP links
+urlencoding = "2"

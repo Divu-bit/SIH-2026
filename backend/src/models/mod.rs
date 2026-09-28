@@ -213,3 +213,103 @@ pub struct AuditSummary {
     pub total_transfers: u64,
     pub total_revocations: u64,
 }
+
+// ── Verifiable Presentation (Phase VP) ───────────────────────────────────────
+
+/// Request body for creating a VP
+/// The holder signs the canonical VP message with their wallet before sending.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateVpRequest {
+    /// Which asset token to present
+    pub token_id: u64,
+    /// How many hours the VP should be valid (1–720)
+    pub expiry_hours: u64,
+    /// Human-readable purpose, e.g. "job_application", "background_check"
+    pub purpose: String,
+    /// EIP-191 signature of the canonical VP message (produced by MetaMask)
+    pub holder_signature: String,
+    /// Holder wallet address (lowercase 0x...)
+    pub holder_address: String,
+}
+
+/// Returned after a VP is created
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateVpResponse {
+    pub vp_id: String,
+    /// The full signed JWT — share this with the verifier
+    pub vp_token: String,
+    /// Convenience URL: /verify/vp?token=<vp_token>
+    pub shareable_url: String,
+    pub expires_at: u64,
+    pub purpose: String,
+}
+
+/// Request body for verifying a VP
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerifyVpRequest {
+    pub vp_token: String,
+}
+
+/// Full VP verification result
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerifyVpResult {
+    pub is_valid: bool,
+    /// Checks breakdown
+    pub checks: VpChecks,
+    /// Credential details (from on-chain)
+    pub credential: Option<VpCredentialDetails>,
+    /// Human-readable failure reason if invalid
+    pub failure_reason: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VpChecks {
+    /// JWT signature by backend is intact
+    pub token_integrity: bool,
+    /// Holder's EIP-191 signature is valid
+    pub holder_signature_valid: bool,
+    /// Signing address matches the DID controller on-chain
+    pub controller_match: bool,
+    /// VP has not expired
+    pub not_expired: bool,
+    /// Credential still active on-chain (not revoked)
+    pub credential_active: bool,
+    /// VP has not been manually revoked by holder
+    pub not_revoked: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VpCredentialDetails {
+    pub token_id: u64,
+    pub owner_did: String,
+    pub issuer_did: String,
+    pub asset_type: String,
+    pub schema_id: String,
+    pub metadata_uri: String,
+    pub issued_at: u64,
+    pub expires_at: u64,
+    pub status: String,
+    pub holder_address: String,
+    pub holder_did: String,
+    pub purpose: String,
+    pub vp_issued_at: u64,
+    pub vp_expires_at: u64,
+}
+
+/// JWT claims for the VP token (backend-signed)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VpTokenClaims {
+    /// "verifiable_presentation"
+    pub typ: String,
+    pub vp_id: String,
+    pub token_id: u64,
+    pub credential_hash: String,
+    pub holder_address: String,
+    pub holder_did: String,
+    pub purpose: String,
+    pub holder_signature: String,
+    /// issued-at (Unix)
+    pub iat: u64,
+    /// expiry (Unix)
+    pub exp: u64,
+}

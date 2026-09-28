@@ -33,6 +33,8 @@ export interface AuthContextType extends AuthState {
   openWalletModal: () => void;
   openAccountModal?: () => void;
   openChainModal?: () => void;
+  /** Sign an arbitrary message with the connected wallet (EIP-191 personal_sign) */
+  signMessage: (message: string) => Promise<string>;
   loading: boolean;
   error: string | null;
   isConnected: boolean;
@@ -53,6 +55,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   logout: () => {},
   openWalletModal: () => {},
+  signMessage: async () => { throw new Error('Not connected'); },
   loading: false,
   error: null,
   isConnected: false,
@@ -229,12 +232,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
   }, [wagmiDisconnect]);
 
+  // ── Sign Message (EIP-191 personal_sign) ────────────────────────────────
+  const handleSignMessage = useCallback(async (message: string): Promise<string> => {
+    if (!wagmiAddress) throw new Error('No wallet connected');
+    const win = window as unknown as { ethereum?: { request: (a: { method: string; params: unknown[] }) => Promise<string> } };
+    if (!win.ethereum) throw new Error('MetaMask not available');
+    const signature = await win.ethereum.request({
+      method: 'personal_sign',
+      params: [message, wagmiAddress],
+    });
+    return signature;
+  }, [wagmiAddress]);
+
   return (
     <AuthContext.Provider
       value={{
         ...state,
         login: handleLogin,
         logout: handleLogout,
+        signMessage: handleSignMessage,
         openWalletModal: openConnectModal || (() => {}),
         openAccountModal,
         openChainModal,

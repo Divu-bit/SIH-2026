@@ -5,6 +5,7 @@ pub mod health;
 pub mod identity;
 pub mod metadata;
 pub mod schemas;
+pub mod vp;
 pub mod write;
 
 use axum::{
@@ -31,6 +32,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/assets/:token_id/status", post(write::update_asset_status))
         .route("/api/assets/:token_id/sync-owner", post(write::sync_nft_owner))
         .route("/api/metadata/upload", post(metadata::upload_metadata))
+        // VP — protected endpoints (holder must be authenticated)
+        .route("/api/vp/create", post(vp::create_vp))
+        .route("/api/vp/my", get(vp::list_my_vps))
+        .route("/api/vp/:vp_id/revoke", post(vp::revoke_vp))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
     Router::new()
@@ -59,7 +64,9 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/audit/events", get(audit::get_events))
         // Metadata (public read)
         .route("/api/metadata/:id", get(metadata::get_metadata))
-        // Merge write routes
+        // VP — public verify (no auth, no holder online needed)
+        .route("/api/vp/verify", post(vp::verify_vp))
+        // Merge write routes (includes protected VP create/revoke/list)
         .merge(write_routes)
         .layer(cors)
         .with_state(state)
