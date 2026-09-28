@@ -62,10 +62,11 @@ export default function ShareCredentialPage() {
       // 3. Sign with MetaMask (EIP-191 personal_sign)
       const signature = await signMessage(message);
 
-      // 4. Send to backend
+      // 4. Send to backend with exact matching expires_at
       const vp = await createVp({
         token_id: parseInt(tokenId),
         expiry_hours: expiryHours,
+        expires_at: expiresAt,
         purpose,
         holder_signature: signature,
         holder_address: address.toLowerCase(),

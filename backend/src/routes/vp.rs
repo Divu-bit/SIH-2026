@@ -98,13 +98,24 @@ pub async fn create_vp(
     Extension(user): Extension<AuthenticatedUser>,
     Json(payload): Json<CreateVpRequest>,
 ) -> Result<Json<CreateVpResponse>, AppError> {
-    // 1. Validate expiry (1–720 hours)
-    let expiry_hours = payload.expiry_hours.clamp(1, 720);
+    // 1. Validate expiry timestamp
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let expires_at = now + (expiry_hours * 3600);
+
+    let expires_at = if let Some(exp) = payload.expires_at {
+        if exp <= now {
+            return Err(AppError::BadRequest("expires_at must be in the future".to_string()));
+        }
+        if exp > now + (720 * 3600) + 300 {
+            return Err(AppError::BadRequest("expires_at exceeds maximum allowed duration of 30 days".to_string()));
+        }
+        exp
+    } else {
+        let hours = payload.expiry_hours.unwrap_or(24).clamp(1, 720);
+        now + (hours * 3600)
+    };
 
     // 2. Normalise holder address
     let holder_address = payload.holder_address.to_lowercase();
@@ -124,27 +135,38 @@ pub async fn create_vp(
         )));
     }
 
-    // 4. Verify the recovered address is the DID controller on-chain
-    let expected_did = format!("did:trustchain:{}", holder_address);
-    let identity = state
-        .client
-        .get_identity(&expected_did)
-        .await
-        .map_err(|_| AppError::Forbidden(
-            "Holder address is not a registered DID controller".to_string(),
-        ))?;
-
-    // 5. Fetch the asset on-chain to confirm holder owns / is associated with it
+    // 4. Fetch the asset on-chain to confirm holder owns / is associated with it
     let asset = state
         .client
         .get_asset(payload.token_id)
         .await
-        .map_err(|e| AppError::BlockchainError(format!("Cannot fetch asset: {}", e)))?;
+        .map_err(|e| AppError::BlockchainError(format!("Cannot fetch asset #{}: {}", payload.token_id, e)))?;
 
-    // The credential's ownerDID must match the holder's DID
-    if asset.owner_did.to_lowercase() != expected_did.to_lowercase() {
+    // 5. Verify the holder is authorized (is NFT owner on-chain, or controller of owner_did)
+    let expected_did = format!("did:trustchain:{}", holder_address);
+    let mut is_authorized = false;
+    let mut holder_did = expected_did.clone();
+
+    if asset.nft_owner.to_lowercase() == holder_address {
+        is_authorized = true;
+        if !asset.owner_did.is_empty() {
+            holder_did = asset.owner_did.clone();
+        }
+    } else if asset.owner_did.to_lowercase() == expected_did {
+        is_authorized = true;
+        holder_did = asset.owner_did.clone();
+    } else if !asset.owner_did.is_empty() {
+        if let Ok(id) = state.client.get_identity(&asset.owner_did).await {
+            if id.controller.to_lowercase() == holder_address {
+                is_authorized = true;
+                holder_did = id.did;
+            }
+        }
+    }
+
+    if !is_authorized {
         return Err(AppError::Forbidden(
-            "You are not the owner of this credential".to_string(),
+            format!("You ({}) are not the owner or DID controller of credential #{}", holder_address, payload.token_id)
         ));
     }
 
@@ -156,7 +178,7 @@ pub async fn create_vp(
         token_id: payload.token_id,
         credential_hash: asset.credential_hash.clone(),
         holder_address: holder_address.clone(),
-        holder_did: identity.did.clone(),
+        holder_did: holder_did.clone(),
         purpose: payload.purpose.clone(),
         holder_signature: payload.holder_signature.clone(),
         iat: now,
@@ -184,7 +206,7 @@ pub async fn create_vp(
     .bind(payload.token_id as i64)
     .bind(&asset.credential_hash)
     .bind(&holder_address)
-    .bind(&identity.did)
+    .bind(&holder_did)
     .bind(&payload.purpose)
     .bind(now as i64)
     .bind(expires_at as i64)
@@ -288,20 +310,39 @@ pub async fn verify_vp(
         Err(_) => false,
     };
 
-    // Step 5 — Check DID controller on-chain matches the signing address
-    let expected_did = format!("did:trustchain:{}", claims.holder_address);
-    let identity_result = state.client.get_identity(&expected_did).await;
-    let controller_match = match &identity_result {
-        Ok(identity) => {
-            identity.controller.to_lowercase() == claims.holder_address.to_lowercase()
+    // Step 5 & 6 — Fetch asset on-chain and check controller/owner match and status
+    let asset_result = state.client.get_asset(claims.token_id).await;
+
+    let mut controller_match = false;
+    if !claims.holder_did.is_empty() {
+        if let Ok(identity) = state.client.get_identity(&claims.holder_did).await {
+            if identity.controller.to_lowercase() == claims.holder_address.to_lowercase() {
+                controller_match = true;
+            }
         }
-        Err(_) => false,
-    };
+    }
+    if !controller_match {
+        let expected_did = format!("did:trustchain:{}", claims.holder_address);
+        if let Ok(identity) = state.client.get_identity(&expected_did).await {
+            if identity.controller.to_lowercase() == claims.holder_address.to_lowercase() {
+                controller_match = true;
+            }
+        }
+    }
+    if !controller_match {
+        if let Ok(ref asset) = asset_result {
+            if asset.nft_owner.to_lowercase() == claims.holder_address.to_lowercase() {
+                controller_match = true;
+            }
+        }
+    }
 
     // Step 6 — Check credential is still active on-chain
-    let asset_result = state.client.get_asset(claims.token_id).await;
     let credential_active = match &asset_result {
-        Ok(asset) => asset.status == "Active" || asset.status == "0",
+        Ok(asset) => {
+            let s = asset.status.to_uppercase();
+            s == "ACTIVE" || s == "0"
+        }
         Err(_) => false,
     };
 
@@ -324,7 +365,7 @@ pub async fn verify_vp(
     let failure_reason = if !is_valid {
         let mut reasons = Vec::new();
         if !holder_signature_valid { reasons.push("Invalid holder signature"); }
-        if !controller_match { reasons.push("Holder address does not match DID controller"); }
+        if !controller_match { reasons.push("Holder address does not match DID controller or NFT owner"); }
         if !not_expired { reasons.push("Presentation has expired"); }
         if !credential_active { reasons.push("Credential has been revoked or is inactive"); }
         if !not_revoked { reasons.push("Presentation has been revoked by the holder"); }

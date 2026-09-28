@@ -215,7 +215,8 @@ export interface AuthState {
 
 export interface CreateVpRequest {
   token_id: number;
-  expiry_hours: number;
+  expiry_hours?: number;
+  expires_at?: number;
   purpose: string;
   holder_signature: string;
   holder_address: string;

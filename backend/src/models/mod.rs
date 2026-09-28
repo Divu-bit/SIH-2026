@@ -223,7 +223,11 @@ pub struct CreateVpRequest {
     /// Which asset token to present
     pub token_id: u64,
     /// How many hours the VP should be valid (1–720)
-    pub expiry_hours: u64,
+    #[serde(default)]
+    pub expiry_hours: Option<u64>,
+    /// Explicit expiry timestamp (unix seconds) matching holder signature
+    #[serde(default)]
+    pub expires_at: Option<u64>,
     /// Human-readable purpose, e.g. "job_application", "background_check"
     pub purpose: String,
     /// EIP-191 signature of the canonical VP message (produced by MetaMask)

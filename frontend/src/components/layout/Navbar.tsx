@@ -16,38 +16,40 @@ interface NavItem {
   children?: { label: string; path: string }[];
 }
 
-const navItems: NavItem[] = [
-  { label: 'Home', path: '/' },
-  {
-    label: 'Identity',
-    children: [
-      { label: 'Lookup DID', path: '/identity' },
-      { label: 'Register Identity', path: '/identity/register' },
-    ],
-  },
-  {
-    label: 'Assets',
-    children: [
-      { label: 'Browse Assets', path: '/assets' },
-      { label: 'Issue Asset', path: '/assets/issue' },
-      { label: 'Verify Asset', path: '/verify' },
-    ],
-  },
-  {
-    label: 'Schemas',
-    children: [
-      { label: 'Browse Schemas', path: '/schemas' },
-      { label: 'Register Schema', path: '/schemas/create' },
-    ],
-  },
-  { label: 'Verify', path: '/verify' },
-  { label: 'Audit', path: '/audit' },
-  { label: 'Dashboard', path: '/dashboard' },
-];
-
 export default function Navbar() {
-  const { logout, error: authError, isAdmin, isManager, isAuditor } = useAuth();
+  const { logout, error: authError, isAdmin, isManager, isAuditor, isAuthenticated } = useAuth();
   const [connectError, setConnectError] = useState<string | null>(null);
+
+  const navItems: NavItem[] = [
+    { label: 'Home', path: '/' },
+    {
+      label: 'Identity',
+      children: [
+        { label: 'Lookup DID', path: '/identity' },
+        { label: 'Register Identity', path: '/identity/register' },
+      ],
+    },
+    {
+      label: 'Assets',
+      children: [
+        { label: 'Browse Assets', path: '/assets' },
+        { label: 'Issue Asset', path: '/assets/issue' },
+        { label: 'Share Credential (VP)', path: '/share' },
+        { label: 'Verify Asset', path: '/verify' },
+      ],
+    },
+    {
+      label: 'Schemas',
+      children: [
+        { label: 'Browse Schemas', path: '/schemas' },
+        { label: 'Register Schema', path: '/schemas/create' },
+      ],
+    },
+    ...(isAuthenticated ? [{ label: 'Share', path: '/share' }] : []),
+    { label: 'Verify', path: '/verify' },
+    { label: 'Audit', path: '/audit' },
+    { label: 'Dashboard', path: '/dashboard' },
+  ];
 
   // Show auth errors
   useEffect(() => {

@@ -13,6 +13,7 @@ import {
   CheckCircle,
   BarChart3,
   Wallet,
+  Share2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getMyIdentity } from '../services/api';
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   }
 
   const quickActions = [
+    { icon: Share2, label: 'Share Credential (VP)', path: '/share', color: 'var(--primary-600)' },
     { icon: Search, label: 'Lookup DID', path: '/identity', color: 'var(--primary-600)' },
     { icon: PlusCircle, label: 'Register Identity', path: '/identity/register', color: 'var(--success)', adminOnly: true },
     { icon: FileCheck, label: 'Issue Asset', path: '/assets/issue', color: 'var(--info)', managerOnly: true },
